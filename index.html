@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <!-- Vakantie-uitgaven — single-file versie. CSS, HTML en JavaScript staan bewust in één bestand. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Uitgaven">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>Vakantie-uitgaven</title>
+
+  <style>
+    /* ========== 1. Basis ========== */
+    :root{color-scheme:dark;--bg:#000;--card:#1c1c1e;--cell:#2c2c2e;--cell2:#242426;--line:#38383a;--text:#f2f2f7;--muted:#8e8e93;--muted2:#636366;--accent:#0a84ff;--good:#30d158;--bad:#ff453a}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}
+    html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{display:none;width:0;height:0}
+    body{padding:18px 13px 34px;-webkit-font-smoothing:antialiased}
+    .wrap{max-width:760px;margin:auto;padding-top:12px;transition:opacity .28s ease}body.loading .wrap{opacity:0}
+    h2{margin:0 0 12px;font-size:28px;line-height:1.05;letter-spacing:-.7px}.hidden{display:none!important}
+
+    /* ========== 2. Kaarten en totalen ========== */
+    .card{background:var(--card);border:1px solid var(--line);border-radius:30px;padding:16px;margin:12px 0;overflow:hidden}.hero{display:flex;flex-direction:column;gap:14px}
+    .total-label{color:var(--muted);font-size:16px;margin-bottom:2px}.total{font-size:clamp(50px,13vw,78px);font-weight:850;letter-spacing:-3px;line-height:.95;margin:0 0 4px}.received-mini{color:var(--good);font-size:15px;font-weight:750;margin-top:6px;letter-spacing:-.2px}
+
+    /* ========== 3. Formulieren ========== */
+    .entry{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}.entry .full,.entry .actions{grid-column:1/-1}.entry .actions,.currency-row,.tools,.export-wrap{display:grid;grid-template-columns:1fr 1fr;gap:9px}.currency-row{grid-column:1/-1}.tools{margin-bottom:12px}.export-wrap{margin-top:12px}
+    select,input,button,.import-label{min-height:48px;border-radius:16px;border:1px solid var(--line);background:var(--cell);color:var(--text);padding:11px 13px;font:inherit;outline:none}input:focus,select:focus{border-color:rgba(10,132,255,.75);box-shadow:0 0 0 3px rgba(10,132,255,.18)}input::placeholder{color:var(--muted2)}button,.import-label{font-weight:850;cursor:pointer;-webkit-tap-highlight-color:transparent}.confirm{color:white;background:rgba(48,209,88,.18);border-color:rgba(48,209,88,.38);font-size:24px}.cancel{color:white;background:rgba(255,69,58,.16);border-color:rgba(255,69,58,.36);font-size:24px}.plus{width:70px;height:70px;border-radius:50%;color:var(--accent);font-size:42px;display:flex;align-items:center;justify-content:center;padding:0;margin-top:10px;background:var(--cell);border-color:var(--line)}.import-label{display:flex;align-items:center;justify-content:center;text-align:center;color:var(--accent)}#importCsvInput{display:none}.import-status{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.35}
+
+    /* ========== 4. Uitgavenlijst ========== */
+    .ios-list{display:flex;flex-direction:column;gap:6px}.list-grid{display:grid;grid-template-columns:92px minmax(128px,1fr) 118px;gap:8px;align-items:center}.list-head{color:var(--muted);font-size:12px;padding:0 10px 4px}.list-head span:nth-child(3){text-align:right}.empty{color:var(--muted);background:var(--cell);border:1px solid var(--line);border-radius:16px;padding:13px}.expense-cell{position:relative;overflow:hidden;border-radius:16px;background:var(--cell);border:1px solid rgba(255,255,255,.08);user-select:none}.expense-line{min-height:52px;padding:9px 10px;background:var(--cell);transition:background .12s ease;padding-right:10px}.expense-cell.show-actions .expense-line{background:#303034;padding-right:148px}.expense-date{color:var(--muted);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}.expense-main{min-width:0}.expense-cat{font-size:15px;white-space:nowrap;overflow:visible;line-height:1.12}.expense-note{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.expense-amount-wrap{text-align:right;white-space:nowrap;min-width:0}.expense-amount{display:block;font-size:15px;font-variant-numeric:tabular-nums;line-height:1.15}.original{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.1;text-align:right}.negative{color:var(--good)}.positive{color:var(--text)}.row-actions{position:absolute;top:0;right:0;bottom:0;width:138px;display:grid;grid-template-columns:1fr 1fr;opacity:0;pointer-events:none;transform:translateX(12px);transition:opacity .14s ease,transform .14s ease;z-index:5;overflow:hidden;border-radius:0 16px 16px 0}.expense-cell.show-actions .row-actions{opacity:1;pointer-events:auto;transform:translateX(0)}.ios-action{height:100%;min-height:100%;border:0;border-radius:0;padding:0 4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:750;line-height:1}.edit-btn{background:var(--accent);color:white}.delete-btn{background:var(--bad);color:white}
+
+    /* ========== 5. Grafiek en categorieën ========== */
+    .chart-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}.chart-pill{background:var(--cell);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:11px 13px;color:var(--muted);font-size:13px}.chart-pill b{display:block;color:var(--text);font-size:20px;margin-top:5px;letter-spacing:-.4px}.bars{display:flex;flex-direction:column;gap:12px;margin-top:8px}.barTop{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--muted);margin-bottom:6px}.barTop strong{color:var(--text);font-weight:750}.barTrack{height:20px;background:#111113;border:1px solid var(--line);border-radius:999px;overflow:hidden}.barFill{height:100%;background:linear-gradient(90deg,var(--accent),#64d2ff);width:0;border-radius:999px;min-width:0;transition:width .25s ease}.manage-categories{display:grid;grid-template-columns:1fr auto;gap:9px;margin-top:10px}.category-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.chip{background:var(--cell);border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:var(--muted);font-size:13px}
+
+    /* ========== 6. Splashscreen en updatebalk ========== */
+    .splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:32px;opacity:1;visibility:visible;transition:opacity .22s ease,visibility .22s ease}.splash img{width:132px;height:132px;border-radius:30px;margin-bottom:18px;box-shadow:0 18px 50px rgba(0,0,0,.55);opacity:0;transform:scale(.94)}.splash h1{font-size:26px;line-height:1.05;letter-spacing:-.6px;margin:0;opacity:0;transform:translateY(7px)}.splash.play img{animation:splashLogoIn .50s ease forwards}.splash.play h1{animation:splashTextIn .45s ease .50s forwards}.splash.fade-out img,.splash.fade-out h1{animation:splashFadeOut .20s ease forwards}.splash.hide{opacity:0;visibility:hidden;pointer-events:none}@keyframes splashLogoIn{to{opacity:1;transform:scale(1)}}@keyframes splashTextIn{to{opacity:1;transform:translateY(0)}}@keyframes splashFadeOut{to{opacity:0;transform:translateY(-4px) scale(.985)}}.update-bar{display:flex;position:fixed;left:12px;right:12px;top:12px;z-index:99998;background:#2c2c2e;border:1px solid #48484a;border-radius:16px;padding:10px 12px;align-items:center;justify-content:space-between;gap:10px}.update-bar span{font-size:14px;font-weight:700}.update-bar button{min-height:34px;border:0;border-radius:12px;background:#c91f2f;color:white;padding:8px 12px;font-weight:800}
+
+    /* ========== 7. Mobiel ========== */
+    @media(max-width:430px){.list-grid{grid-template-columns:88px minmax(124px,1fr) 104px;gap:6px}.expense-date{font-size:12px}.expense-cat{font-size:14px}.expense-amount{font-size:14px}.row-actions{width:126px}.expense-cell.show-actions .expense-line{padding-right:136px}}
+    @media(max-width:390px){body{padding-left:10px;padding-right:10px}.card{padding:14px}.list-grid{grid-template-columns:82px minmax(112px,1fr) 98px;gap:5px}.expense-line{padding-left:8px;padding-right:8px}.expense-cell.show-actions .expense-line{padding-right:128px}.list-head{padding-left:8px;padding-right:8px}.expense-date{font-size:11px}.expense-cat{font-size:13px}.expense-amount{font-size:13px}.original,.expense-note{font-size:10.5px}.row-actions{width:120px}}
+  </style>
+</head>
+
+<body>
+  <!-- ========== HTML ========== -->
+  <div id="splash" class="splash"><img src="icons/icon-512.png" alt=""><h1>Vakantie-uitgaven</h1></div>
+  <div id="updateBar" class="update-bar hidden"><span>Nieuwe versie beschikbaar</span><button id="updateNow" type="button">Bijwerken</button></div>
+
+  <main class="wrap">
+    <section class="card hero">
+      <div><div class="total-label">Netto totaal</div><div class="total" id="netTotal">€ 0,00</div><div class="received-mini" id="receivedMini">€ 0,00</div></div>
+      <div>
+        <h2 id="entryTitle">Nieuwe regel</h2>
+        <div id="entryBox" class="entry hidden">
+          <select id="categoryInput"></select>
+          <input id="dateInput" type="date">
+          <div class="currency-row"><select id="currencyInput"><option value="EUR">Euro</option><option value="PLN">Zloty</option></select><input id="rateInput" inputmode="decimal" type="text" placeholder="Koers"></div>
+          <input id="amountInput" inputmode="decimal" type="text" placeholder="Bedrag">
+          <input id="noteInput" class="full" type="text" placeholder="Opmerking">
+          <div class="actions"><button id="confirmBtn" class="confirm" type="button">✓</button><button id="cancelBtn" class="cancel" type="button">×</button></div>
+        </div>
+        <button id="addBtn" class="plus" type="button">+</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Totale uitgaven</h2>
+      <div class="tools"><select id="filterSelect"></select><select id="sortSelect"><option value="newest">Nieuwste eerst</option><option value="oldest">Oudste eerst</option><option value="category">Soort uitgave</option><option value="amountDesc">Hoogste bedrag eerst</option><option value="amountAsc">Laagste bedrag eerst</option></select></div>
+      <div class="list-head list-grid"><span>Datum</span><span>Uitgave</span><span>Bedrag</span></div>
+      <div id="expenseList" class="ios-list"><div class="empty">Nog geen uitgaven.</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Grafiek per categorie</h2>
+      <div class="chart-summary"><div class="chart-pill">Hoogste categorie<b id="chartTopCat">-</b></div><div class="chart-pill">Aantal uitgaven<b id="expenseCount">0</b></div></div>
+      <div id="chart" class="bars"><div class="empty">Nog geen gegevens voor de grafiek.</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Posten beheren</h2>
+      <div class="manage-categories"><input id="newCategoryInput" type="text" placeholder="Nieuwe post"><button id="addCategoryBtn" type="button">Toevoegen</button></div>
+      <div class="category-list" id="categoryList"></div>
+    </section>
+
+    <section class="card">
+      <h2>Export</h2>
+      <div class="export-wrap"><button id="exportBtn" type="button">Export CSV</button><label class="import-label" for="importCsvInput">Import CSV</label><input id="importCsvInput" type="file" accept=".csv,text/csv"></div>
+      <div id="importStatus" class="import-status"></div>
+    </section>
+  </main>
+
+  <script>
+    /* ========== JavaScript ========== */
+    (()=>{"use strict";
+      const STORAGE={data:"zomervakantie-uitgaven-dropbox-v10",categories:"zomervakantie-uitgaven-categories-v10",oldData:["zomervakantie-uitgaven-dropbox-v9","zomervakantie-uitgaven-dropbox-v8","zomervakantie-uitgaven-dropbox-v7","zomervakantie-uitgaven-dropbox-v6","zomervakantie-uitgaven-dropbox-v5","zomervakantie-uitgaven-dropbox-v4","zomervakantie-uitgaven-dropbox-v3","zomervakantie-uitgaven-dropbox-v2"]};
+      const DEFAULT_CATEGORIES=["Boodschappen","Vervoer","Cadeaus","Verzamelen","Uit eten","Reis"];
+      let categories=[...DEFAULT_CATEGORIES],expenses=[],editingId=null;
+      const $=id=>document.getElementById(id);
+      const el={splash:$("splash"),updateBar:$("updateBar"),updateNow:$("updateNow"),netTotal:$("netTotal"),receivedMini:$("receivedMini"),chartTopCat:$("chartTopCat"),expenseCount:$("expenseCount"),chart:$("chart"),entryTitle:$("entryTitle"),entryBox:$("entryBox"),addBtn:$("addBtn"),confirmBtn:$("confirmBtn"),cancelBtn:$("cancelBtn"),categoryInput:$("categoryInput"),dateInput:$("dateInput"),currencyInput:$("currencyInput"),rateInput:$("rateInput"),amountInput:$("amountInput"),noteInput:$("noteInput"),filterSelect:$("filterSelect"),sortSelect:$("sortSelect"),expenseList:$("expenseList"),newCategoryInput:$("newCategoryInput"),addCategoryBtn:$("addCategoryBtn"),categoryList:$("categoryList"),exportBtn:$("exportBtn"),importCsvInput:$("importCsvInput"),importStatus:$("importStatus")};
+
+      /* Helpers */
+      const escapeHtml=v=>String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+      const parseAmount=v=>{const n=parseFloat(String(v||"").replace("€","").replace("zł","").replace("PLN","").replace(/\s/g,"").replace(",","."));return Number.isFinite(n)?n:0};
+      const euro=v=>new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"}).format(v||0);
+      const pln=v=>"PLN "+new Intl.NumberFormat("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}).format(v||0);
+      const isoToday=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
+      const displayDate=v=>{if(!v)return"";const p=String(v).split("-");return p.length===3&&p[0].length===4?`${p[2]}-${p[1]}-${p[0]}`:v};
+      const normalizeDate=v=>{v=String(v||"").trim();if(!v)return isoToday();if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;if(/^\d{2}-\d{2}-\d{4}$/.test(v)){const p=v.split("-");return`${p[2]}-${p[1]}-${p[0]}`}if(/^\d{2}\/\d{2}\/\d{4}$/.test(v)){const p=v.split("/");return`${p[2]}-${p[1]}-${p[0]}`}return isoToday()};
+
+      /* Opslag */
+      function save(){try{localStorage.setItem(STORAGE.data,JSON.stringify(expenses));localStorage.setItem(STORAGE.categories,JSON.stringify(categories))}catch(e){}}
+      function load(){try{const sc=localStorage.getItem(STORAGE.categories);categories=sc?JSON.parse(sc):[...DEFAULT_CATEGORIES];if(!Array.isArray(categories)||!categories.length)categories=[...DEFAULT_CATEGORIES];let raw=localStorage.getItem(STORAGE.data);if(!raw)for(const key of STORAGE.oldData){raw=localStorage.getItem(key);if(raw)break}expenses=raw?JSON.parse(raw):[];if(!Array.isArray(expenses))expenses=[];expenses=expenses.map(item=>{const x={id:item.id||Date.now()+Math.random(),date:normalizeDate(item.date),category:item.category||"Boodschappen",amount:Number(item.amount)||0,originalAmount:Number(item.originalAmount??item.amount)||0,currency:item.currency==="PLN"?"PLN":"EUR",rate:Number(item.rate)||1,note:item.note||""};if(x.currency==="PLN"&&x.rate>0&&x.rate<1){x.rate=1/x.rate;x.amount=x.originalAmount/x.rate}if(!categories.includes(x.category))categories.push(x.category);return x})}catch(e){categories=[...DEFAULT_CATEGORIES];expenses=[]}}
+
+      /* Invoer */
+      function showEntry(item=null){el.entryBox.classList.remove("hidden");el.addBtn.classList.add("hidden");if(item){editingId=item.id;el.entryTitle.textContent="Uitgave aanpassen";el.categoryInput.value=item.category;el.dateInput.value=item.date||isoToday();el.currencyInput.value=item.currency||"EUR";el.rateInput.value=item.currency==="PLN"?String(item.rate||"").replace(".",","):"";el.amountInput.value=String(item.originalAmount||item.amount||"").replace(".",",");el.noteInput.value=item.note||"";el.rateInput.disabled=item.currency!=="PLN"}else{editingId=null;el.entryTitle.textContent="Nieuwe regel";el.categoryInput.value=categories[0]||"Boodschappen";el.dateInput.value=isoToday();el.currencyInput.value="EUR";el.rateInput.value="";el.amountInput.value="";el.noteInput.value="";el.rateInput.disabled=true}setTimeout(()=>el.amountInput.focus(),100)}
+      function hideEntry(){editingId=null;el.entryTitle.textContent="Nieuwe regel";el.entryBox.classList.add("hidden");el.addBtn.classList.remove("hidden");el.amountInput.value="";el.noteInput.value="";el.rateInput.value="";el.rateInput.disabled=true}
+      function buildExpense(id=null){const originalAmount=parseAmount(el.amountInput.value),currency=el.currencyInput.value,rate=currency==="PLN"?parseAmount(el.rateInput.value):1;if(el.amountInput.value.trim()===""){el.amountInput.focus();return null}if(currency==="PLN"&&(!rate||rate<=0)){el.rateInput.focus();return null}return{id:id||Date.now()+Math.random(),date:el.dateInput.value||isoToday(),category:el.categoryInput.value,amount:currency==="PLN"?originalAmount/rate:originalAmount,originalAmount,currency,rate,note:el.noteInput.value.trim()}}
+      function saveEntry(){const item=buildExpense(editingId);if(!item)return;if(editingId)expenses=expenses.map(x=>String(x.id)===String(editingId)?item:x);else expenses.push(item);save();hideEntry();render()}
+      function deleteExpense(id){expenses=expenses.filter(x=>String(x.id)!==String(id));save();render()}
+      const findExpense=id=>expenses.find(x=>String(x.id)===String(id))||null;
+
+      /* Categorieën */
+      function addCategory(){const v=el.newCategoryInput.value.trim();if(!v)return;if(!categories.some(c=>c.toLowerCase()===v.toLowerCase())){categories.push(v);save();render()}el.newCategoryInput.value=""}
+      function renderCategoryOptions(){const options=categories.map(c=>`<option>${escapeHtml(c)}</option>`).join("");el.categoryInput.innerHTML=options;const current=el.filterSelect.value||"Alles";el.filterSelect.innerHTML=`<option value="Alles">Alles tonen</option>${options}`;el.filterSelect.value=categories.includes(current)?current:"Alles";el.categoryList.innerHTML=categories.map(c=>`<span class="chip">${escapeHtml(c)}</span>`).join("")}
+
+      /* Lijst */
+      function filteredSortedExpenses(){let r=[...expenses];if(el.filterSelect.value!=="Alles")r=r.filter(x=>x.category===el.filterSelect.value);switch(el.sortSelect.value){case"oldest":return r.sort((a,b)=>String(a.date).localeCompare(String(b.date))||(a.id-b.id));case"category":return r.sort((a,b)=>a.category.localeCompare(b.category));case"amountDesc":return r.sort((a,b)=>b.amount-a.amount);case"amountAsc":return r.sort((a,b)=>a.amount-b.amount);default:return r.sort((a,b)=>String(b.date).localeCompare(String(a.date))||(b.id-a.id))}}
+      function closeActionsExcept(active=null){document.querySelectorAll(".expense-cell").forEach(cell=>{if(cell!==active)cell.classList.remove("show-actions")})}
+      function renderList(){const list=filteredSortedExpenses();if(!list.length){el.expenseList.innerHTML=`<div class="empty">Nog geen uitgaven.</div>`;return}el.expenseList.innerHTML=list.map(x=>{const note=x.note?`<span class="expense-note">${escapeHtml(x.note)}</span>`:"",orig=x.currency==="PLN"?`<span class="original">${pln(x.originalAmount)}</span>`:"";return`<div class="expense-cell" data-id="${x.id}"><div class="expense-line list-grid"><div class="expense-date">${escapeHtml(displayDate(x.date))}</div><div class="expense-main"><div class="expense-cat">${escapeHtml(x.category)}</div>${note}</div><div class="expense-amount-wrap"><span class="expense-amount ${x.amount<0?"negative":"positive"}">${euro(x.amount)}</span>${orig}</div></div><div class="row-actions"><button class="ios-action edit-btn" data-edit="${x.id}" type="button">Wijzig</button><button class="ios-action delete-btn" data-delete="${x.id}" type="button">Wis</button></div></div>`}).join("");document.querySelectorAll(".expense-line").forEach(row=>{row.onclick=e=>{if(e.target.closest("button"))return;const cell=row.parentElement,open=cell.classList.contains("show-actions");closeActionsExcept(cell);cell.classList.toggle("show-actions",!open)}});document.querySelectorAll("[data-delete]").forEach(btn=>btn.onclick=e=>{e.stopPropagation();deleteExpense(btn.dataset.delete)});document.querySelectorAll("[data-edit]").forEach(btn=>btn.onclick=e=>{e.stopPropagation();const item=findExpense(btn.dataset.edit);if(item)showEntry(item)})}
+
+      /* Statistiek */
+      function renderStats(){let net=0,received=0;const totals=Object.fromEntries(categories.map(c=>[c,0]));expenses.forEach(x=>{net+=x.amount;if(x.amount>=0)totals[x.category]=(totals[x.category]||0)+x.amount;else received+=Math.abs(x.amount)});let top="-",topVal=0;categories.forEach(c=>{if((totals[c]||0)>topVal){topVal=totals[c];top=c}});el.netTotal.textContent=euro(net);el.receivedMini.textContent=euro(received);el.chartTopCat.textContent=top;el.expenseCount.textContent=String(expenses.length)}
+      function renderChart(){const totals=Object.fromEntries(categories.map(c=>[c,0]));expenses.forEach(x=>{if(x.amount>0)totals[x.category]=(totals[x.category]||0)+x.amount});const max=Math.max(...Object.values(totals));if(!max){el.chart.innerHTML=`<div class="empty">Nog geen gegevens voor de grafiek.</div>`;return}el.chart.innerHTML=categories.slice().sort((a,b)=>(totals[b]||0)-(totals[a]||0)).map(c=>{const v=totals[c]||0,p=Math.round(v/max*100);return`<div><div class="barTop"><strong>${escapeHtml(c)}</strong><span>${euro(v)}</span></div><div class="barTrack"><div class="barFill" style="width:${p}%"></div></div></div>`}).join("")}
+
+      /* CSV */
+      function exportCSV(){const lines=["Datum;Uitgave;Bedrag EUR;Origineel bedrag;Valuta;Koers;Opmerking"];expenses.forEach(x=>lines.push([displayDate(x.date),x.category,String(x.amount).replace(".",","),String(x.originalAmount).replace(".",","),x.currency,String(x.rate).replace(".",","),String(x.note||"").replace(/;/g,",")].join(";")));const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="zomervakantie-uitgaven.csv";a.click();URL.revokeObjectURL(url)}
+      function parseCsvLine(line){const result=[];let current="",quotes=false;for(let i=0;i<line.length;i++){const ch=line[i],next=line[i+1];if(ch==='"'&&quotes&&next==='"'){current+='"';i++}else if(ch==='"')quotes=!quotes;else if(ch===";"&&!quotes){result.push(current);current=""}else current+=ch}result.push(current);return result}
+      function importCSVText(text){text=String(text||"").replace(/^\uFEFF/,"").trim();if(!text){el.importStatus.textContent="CSV is leeg.";return}const lines=text.split(/\r?\n/).filter(x=>x.trim()!=="");if(lines.length<2){el.importStatus.textContent="Geen uitgaven gevonden in CSV.";return}const headers=parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase()),col=names=>{for(const n of names){const i=headers.indexOf(n.toLowerCase());if(i>=0)return i}return-1},cols={date:col(["datum","date"]),category:col(["uitgave","soort","categorie","category"]),euro:col(["bedrag eur","bedrag","amount eur","amount"]),original:col(["origineel bedrag","original amount"]),currency:col(["valuta","currency"]),rate:col(["koers","rate"]),note:col(["opmerking","note","omschrijving"])};let imported=0,skipped=0;for(let r=1;r<lines.length;r++){const row=parseCsvLine(lines[r]),category=cols.category>=0?String(row[cols.category]||"").trim():"";if(!category){skipped++;continue}let currency=cols.currency>=0?String(row[cols.currency]||"EUR").trim().toUpperCase():"EUR";if(currency!=="PLN")currency="EUR";let originalAmount=cols.original>=0?parseAmount(row[cols.original]):0,amount=cols.euro>=0?parseAmount(row[cols.euro]):0,rate=cols.rate>=0?parseAmount(row[cols.rate]):1;if(currency==="PLN"){if(!originalAmount&&amount)originalAmount=amount;if(!rate||rate<=0)rate=originalAmount&&amount?originalAmount/amount:4.25;amount=originalAmount/rate}else{originalAmount=originalAmount||amount;amount=amount||originalAmount;rate=1}if(!amount&&!originalAmount){skipped++;continue}if(!categories.includes(category))categories.push(category);expenses.push({id:Date.now()+Math.random()+r,date:normalizeDate(cols.date>=0?row[cols.date]:""),category,amount,originalAmount,currency,rate,note:cols.note>=0?String(row[cols.note]||"").trim():""});imported++}save();render();el.importStatus.textContent=imported+" uitgave"+(imported===1?"":"n")+" geïmporteerd"+(skipped?", "+skipped+" overgeslagen.":".")}
+      function importCSVFile(file){if(!file)return;const reader=new FileReader();reader.onload=e=>{importCSVText(e.target.result);el.importCsvInput.value=""};reader.onerror=()=>{el.importStatus.textContent="Importeren mislukt."};reader.readAsText(file,"utf-8")}
+
+      /* Splash / service worker */
+      function playSplash(){document.body.classList.add("loading");el.splash.classList.add("play");setTimeout(()=>el.splash.classList.add("fade-out"),1800);setTimeout(()=>{el.splash.classList.add("hide");document.body.classList.remove("loading")},2000)}
+      function registerServiceWorker(){if(!("serviceWorker"in navigator))return;let waitingWorker=null;navigator.serviceWorker.register("service-worker.js").then(reg=>{reg.addEventListener("updatefound",()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){waitingWorker=worker;el.updateBar.classList.remove("hidden")}})})}).catch(()=>{});el.updateNow.onclick=()=>{if(waitingWorker)waitingWorker.postMessage({type:"SKIP_WAITING"});else location.reload()};navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload())}
+
+      /* Start */
+      function bindEvents(){el.addBtn.onclick=()=>showEntry();el.confirmBtn.onclick=saveEntry;el.cancelBtn.onclick=hideEntry;el.filterSelect.onchange=renderList;el.sortSelect.onchange=renderList;el.exportBtn.onclick=exportCSV;el.importCsvInput.onchange=()=>importCSVFile(el.importCsvInput.files&&el.importCsvInput.files[0]);el.addCategoryBtn.onclick=addCategory;document.addEventListener("click",e=>{if(!e.target.closest(".expense-cell"))closeActionsExcept()});el.currencyInput.onchange=()=>{if(el.currencyInput.value==="PLN"){el.rateInput.disabled=false;if(!el.rateInput.value)el.rateInput.value="4,25"}else{el.rateInput.disabled=true;el.rateInput.value=""}};el.amountInput.addEventListener("keydown",e=>{if(e.key==="Enter")saveEntry()});el.noteInput.addEventListener("keydown",e=>{if(e.key==="Enter")saveEntry()});el.newCategoryInput.addEventListener("keydown",e=>{if(e.key==="Enter")addCategory()})}
+      function render(){renderCategoryOptions();renderStats();renderList();renderChart()}
+      function start(){playSplash();load();bindEvents();hideEntry();render();registerServiceWorker()}
+      document.readyState==="loading"?document.addEventListener("DOMContentLoaded",start):start();
+    })();
+  </script>
+</body>
+</html>
