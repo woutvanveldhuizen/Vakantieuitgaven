@@ -1,0 +1,1892 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <!--
+    Vakantie-uitgaven v2.0.2.2
+    Single-file webapp: HTML + CSS + JavaScript in één index.html.
+    Bestaande localStorage-keys blijven behouden.
+  -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Uitgaven">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>Vakantie-uitgaven</title>
+
+  <style>
+    /* =========================================================
+       1. Basis
+       ========================================================= */
+    :root{
+      color-scheme:dark;
+      --bg:#000;
+      --card:#1c1c1e;
+      --cell:#2c2c2e;
+      --cell2:#242426;
+      --line:#38383a;
+      --text:#f2f2f7;
+      --muted:#8e8e93;
+      --muted2:#636366;
+      --accent:#0a84ff;
+      --good:#30d158;
+      --bad:#ff453a;
+      --orange:#ff9f0a;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;
+      overflow-x:hidden;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    *::-webkit-scrollbar{
+      display:none;
+      width:0;
+      height:0;
+    }
+
+    body{
+      padding:18px 13px 34px;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    .wrap{
+      max-width:760px;
+      margin:auto;
+      padding-top:12px;
+      transition:opacity .28s ease;
+    }
+
+    body.loading .wrap{opacity:0}
+
+    h2{
+      margin:0 0 12px;
+      font-size:28px;
+      line-height:1.05;
+      letter-spacing:-.7px;
+    }
+
+    .hidden{display:none!important}
+
+    /* =========================================================
+       2. Kaarten en totaal
+       ========================================================= */
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:30px;
+      padding:16px;
+      margin:12px 0;
+      overflow:hidden;
+    }
+
+    .hero{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .hero-top{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:12px;
+      align-items:start;
+    }
+
+    .total-label{
+      color:var(--muted);
+      font-size:16px;
+      margin-bottom:2px;
+    }
+
+    .total{
+      font-size:clamp(50px,13vw,78px);
+      font-weight:850;
+      letter-spacing:-3px;
+      line-height:.95;
+      margin:0 0 4px;
+    }
+
+    .received-mini{
+      color:var(--good);
+      font-size:15px;
+      font-weight:750;
+      margin-top:6px;
+      letter-spacing:-.2px;
+    }
+
+    .rate-badge{
+      justify-self:end;
+      text-align:right;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.1;
+      padding-top:4px;
+      min-width:72px;
+    }
+
+    .rate-badge b{
+      display:block;
+      color:var(--text);
+      font-size:15px;
+      margin-top:3px;
+      font-variant-numeric:tabular-nums;
+    }
+
+    .rate-badge.ok b{color:var(--good)}
+    .rate-badge.err b{color:var(--orange)}
+    .rate-badge.loading b{color:var(--muted)}
+
+    /* =========================================================
+       3. Formulieren
+       ========================================================= */
+    .entry{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+      margin-top:10px;
+    }
+
+    .entry .full,
+    .entry .actions,
+    .currency-row,
+    .amount-row,
+    .type-switch{
+      grid-column:1/-1;
+    }
+
+    .entry .actions,
+    .currency-row,
+    .export-wrap{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+    }
+
+    .tools{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:9px;
+      margin-bottom:12px;
+    }
+
+    .tools select{
+      width:100%;
+      min-width:0;
+    }
+
+    select,input,button,.import-label{
+      min-height:48px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:var(--cell);
+      color:var(--text);
+      padding:11px 13px;
+      font:inherit;
+      outline:none;
+    }
+
+    input:focus,
+    select:focus{
+      border-color:rgba(10,132,255,.75);
+      box-shadow:0 0 0 3px rgba(10,132,255,.18);
+    }
+
+    input::placeholder{color:var(--muted2)}
+
+    button,.import-label{
+      font-weight:850;
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    .type-switch{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      background:#111113;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:4px;
+    }
+
+    .type-switch button{
+      min-height:40px;
+      border:0;
+      border-radius:12px;
+      background:transparent;
+      color:var(--muted);
+      padding:8px 10px;
+    }
+
+    .type-switch button.active{
+      background:var(--cell);
+      color:var(--text);
+    }
+
+    .type-switch button[data-type="income"].active{
+      color:var(--good);
+    }
+
+    .amount-row{
+      display:grid;
+      grid-template-columns:1fr;
+    }
+
+    .confirm{
+      color:white;
+      background:rgba(48,209,88,.18);
+      border-color:rgba(48,209,88,.38);
+      font-size:24px;
+    }
+
+    .cancel{
+      color:white;
+      background:rgba(255,69,58,.16);
+      border-color:rgba(255,69,58,.36);
+      font-size:24px;
+    }
+
+    .plus{
+      width:70px;
+      height:70px;
+      border-radius:50%;
+      color:var(--accent);
+      font-size:42px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      margin-top:10px;
+      background:var(--cell);
+      border-color:var(--line);
+    }
+
+    /* =========================================================
+       4. Uitgavenlijst + iOS swipe
+       ========================================================= */
+    .ios-list{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .list-grid{
+      display:grid;
+      grid-template-columns:92px minmax(128px,1fr) 118px;
+      gap:8px;
+      align-items:center;
+    }
+
+    .list-head{
+      color:var(--muted);
+      font-size:12px;
+      padding:0 10px 4px;
+    }
+
+    .list-head span:nth-child(3){text-align:right}
+
+    .empty{
+      color:var(--muted);
+      background:var(--cell);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:13px;
+    }
+
+    .expense-cell{
+      position:relative;
+      overflow:hidden;
+      border-radius:16px;
+      background:var(--cell);
+      border:1px solid rgba(255,255,255,.08);
+      user-select:none;
+      touch-action:pan-y;
+    }
+
+    .expense-line{
+      position:relative;
+      z-index:2;
+      min-height:52px;
+      padding:9px 10px;
+      background:var(--cell);
+      transition:transform .18s cubic-bezier(.2,.8,.2,1),background .12s ease;
+      will-change:transform;
+    }
+
+    .expense-date{
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+      font-variant-numeric:tabular-nums;
+    }
+
+    .expense-main{min-width:0}
+
+    .expense-cat{
+      font-size:15px;
+      white-space:nowrap;
+      overflow:visible;
+      line-height:1.12;
+    }
+
+    .expense-note{
+      display:block;
+      margin-top:3px;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.15;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:100%;
+    }
+
+    .expense-amount-wrap{
+      text-align:right;
+      white-space:nowrap;
+      min-width:0;
+    }
+
+    .expense-amount{
+      display:block;
+      font-size:15px;
+      font-variant-numeric:tabular-nums;
+      line-height:1.15;
+    }
+
+    .original{
+      display:block;
+      margin-top:3px;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.1;
+      text-align:right;
+    }
+
+    .income{color:var(--good)}
+    .outgoing{color:var(--text)}
+
+    .swipe-action{
+      position:absolute;
+      top:0;
+      bottom:0;
+      width:82px;
+      z-index:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:0;
+      border-radius:0;
+      color:white;
+      padding:0;
+    }
+
+    .swipe-edit{left:0;background:var(--accent)}
+    .swipe-delete{right:0;background:var(--bad)}
+
+    .swipe-action svg{
+      width:24px;
+      height:24px;
+      fill:none;
+      stroke:white;
+      stroke-width:2.2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .expense-cell.edit-open .expense-line{transform:translateX(82px)}
+    .expense-cell.delete-open .expense-line{transform:translateX(-82px)}
+    .expense-cell.dragging .expense-line{transition:none}
+
+    /* =========================================================
+       5. Grafiek en categorieën
+       ========================================================= */
+    .chart-summary{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+      margin-bottom:12px;
+    }
+
+    .chart-pill{
+      background:var(--cell);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:11px 13px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .chart-pill b{
+      display:block;
+      color:var(--text);
+      font-size:20px;
+      margin-top:5px;
+      letter-spacing:-.4px;
+    }
+
+    .bars{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      margin-top:8px;
+    }
+
+    .barTop{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      font-size:15px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
+    .barTop strong{
+      color:var(--text);
+      font-weight:750;
+    }
+
+    .barTrack{
+      height:20px;
+      background:#111113;
+      border:1px solid var(--line);
+      border-radius:999px;
+      overflow:hidden;
+    }
+
+    .barFill{
+      height:100%;
+      width:0;
+      border-radius:999px;
+      min-width:0;
+      transition:width .25s ease;
+    }
+
+    .barFill.outgoing{background:linear-gradient(90deg,#5e5ce6,var(--accent))}
+    .barFill.income{background:linear-gradient(90deg,#248a3d,var(--good))}
+
+    .manage-categories{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto 54px;
+      gap:9px;
+      margin-top:10px;
+    }
+
+    .category-list{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:10px;
+    }
+
+    .chip{
+      background:var(--cell);
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:7px 10px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .chip.can-delete{
+      color:white;
+      background:rgba(255,69,58,.25);
+      border-color:rgba(255,69,58,.45);
+    }
+
+    .chip.locked{
+      opacity:.38;
+      color:var(--muted);
+    }
+
+    .category-edit-btn{
+      width:54px;
+      padding:0;
+      color:var(--bad);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .category-edit-btn.active{
+      background:rgba(255,69,58,.20);
+      border-color:rgba(255,69,58,.45);
+    }
+
+    .category-edit-btn svg{
+      width:22px;
+      height:22px;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:2.2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    /* =========================================================
+       6. CSV
+       ========================================================= */
+    .export-wrap{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+      margin-top:12px;
+    }
+
+    .import-label{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      color:var(--accent);
+    }
+
+    #importCsvInput{display:none}
+
+    .import-status{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    /* =========================================================
+       7. Splashscreen en updatebalk
+       ========================================================= */
+    .splash{
+      position:fixed;
+      inset:0;
+      z-index:99999;
+      background:#000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      padding:32px;
+      opacity:1;
+      visibility:visible;
+      transition:opacity .22s ease,visibility .22s ease;
+    }
+
+    .splash img{
+      width:132px;
+      height:132px;
+      border-radius:30px;
+      margin-bottom:18px;
+      box-shadow:0 18px 50px rgba(0,0,0,.55);
+      opacity:0;
+      transform:scale(.94);
+    }
+
+    .splash h1{
+      font-size:26px;
+      line-height:1.05;
+      letter-spacing:-.6px;
+      margin:0;
+      opacity:0;
+      transform:translateY(7px);
+    }
+
+    .splash.play img{animation:splashLogoIn .50s ease forwards}
+    .splash.play h1{animation:splashTextIn .45s ease .50s forwards}
+    .splash.fade-out img,
+    .splash.fade-out h1{animation:splashFadeOut .20s ease forwards}
+    .splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+
+    @keyframes splashLogoIn{to{opacity:1;transform:scale(1)}}
+    @keyframes splashTextIn{to{opacity:1;transform:translateY(0)}}
+    @keyframes splashFadeOut{to{opacity:0;transform:translateY(-4px) scale(.985)}}
+
+    .update-bar{
+      display:flex;
+      position:fixed;
+      left:12px;
+      right:12px;
+      top:12px;
+      z-index:99998;
+      background:#2c2c2e;
+      border:1px solid #48484a;
+      border-radius:16px;
+      padding:10px 12px;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .update-bar span{
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .update-bar button{
+      min-height:34px;
+      border:0;
+      border-radius:12px;
+      background:#c91f2f;
+      color:white;
+      padding:8px 12px;
+      font-weight:800;
+    }
+
+    /* =========================================================
+       8. Mobiel
+       ========================================================= */
+    @media(max-width:430px){
+      .list-grid{
+        grid-template-columns:88px minmax(124px,1fr) 104px;
+        gap:6px;
+      }
+      .expense-date{font-size:12px}
+      .expense-cat{font-size:14px}
+      .expense-amount{font-size:14px}
+      .swipe-action{width:76px}
+      .expense-cell.edit-open .expense-line{transform:translateX(76px)}
+      .expense-cell.delete-open .expense-line{transform:translateX(-76px)}
+    }
+
+    @media(max-width:390px){
+      body{padding-left:10px;padding-right:10px}
+      .card{padding:14px}
+      .list-grid{
+        grid-template-columns:82px minmax(112px,1fr) 98px;
+        gap:5px;
+      }
+      .expense-line{
+        padding-left:8px;
+        padding-right:8px;
+      }
+      .list-head{
+        padding-left:8px;
+        padding-right:8px;
+      }
+      .expense-date{font-size:11px}
+      .expense-cat{font-size:13px}
+      .expense-amount{font-size:13px}
+      .original,.expense-note{font-size:10.5px}
+      .manage-categories{grid-template-columns:minmax(0,1fr) auto 50px}
+      .category-edit-btn{width:50px}
+    }
+  </style>
+</head>
+
+<body>
+  <!-- =========================================================
+       HTML
+       ========================================================= -->
+  <div id="splash" class="splash">
+    <img src="icons/icon-512.png" alt="">
+    <h1>Vakantie-uitgaven</h1>
+  </div>
+
+  <div id="updateBar" class="update-bar hidden">
+    <span>Nieuwe versie beschikbaar</span>
+    <button id="updateNow" type="button">Bijwerken</button>
+  </div>
+
+  <main class="wrap">
+    <section class="card hero">
+      <div class="hero-top">
+        <div>
+          <div class="total-label">Netto totaal</div>
+          <div class="total" id="netTotal">€ 0,00</div>
+          <div class="received-mini" id="receivedMini">€ 0,00</div>
+        </div>
+        <div id="rateBadge" class="rate-badge"><span>PLN</span><b>—</b></div>
+      </div>
+
+      <div>
+        <h2 id="entryTitle">Nieuwe regel</h2>
+
+        <div id="entryBox" class="entry hidden">
+          <div class="type-switch">
+            <button id="expenseTypeBtn" type="button" data-type="expense" class="active">Uitgave</button>
+            <button id="incomeTypeBtn" type="button" data-type="income">Ontvangen</button>
+          </div>
+
+          <select id="categoryInput"></select>
+          <input id="dateInput" type="date">
+
+          <div class="currency-row">
+            <select id="currencyInput">
+              <option value="EUR">Euro</option>
+              <option value="PLN">Zloty</option>
+            </select>
+            <input id="rateInput" inputmode="decimal" type="text" placeholder="Koers">
+          </div>
+
+          <div class="amount-row">
+            <input id="amountInput" inputmode="decimal" type="text" placeholder="Bedrag">
+          </div>
+
+          <input id="noteInput" class="full" type="text" placeholder="Opmerking">
+
+          <div class="actions">
+            <button id="confirmBtn" class="confirm" type="button">✓</button>
+            <button id="cancelBtn" class="cancel" type="button">×</button>
+          </div>
+        </div>
+
+        <button id="addBtn" class="plus" type="button">+</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Totale uitgaven</h2>
+
+      <div class="tools">
+        <select id="filterSelect"></select>
+        <select id="sortSelect">
+          <option value="newest">Nieuwste eerst</option>
+          <option value="oldest">Oudste eerst</option>
+          <option value="category">Soort uitgave</option>
+          <option value="amountDesc">Hoogste bedrag eerst</option>
+          <option value="amountAsc">Laagste bedrag eerst</option>
+        </select>
+      </div>
+
+      <div class="list-head list-grid">
+        <span>Datum</span>
+        <span>Uitgave</span>
+        <span>Bedrag</span>
+      </div>
+
+      <div id="expenseList" class="ios-list">
+        <div class="empty">Nog geen uitgaven.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Grafiek per categorie</h2>
+
+      <div class="chart-summary">
+        <div class="chart-pill">Grootste netto post<b id="chartTopCat">-</b></div>
+        <div class="chart-pill">Aantal uitgaven<b id="expenseCount">0</b></div>
+      </div>
+
+      <div id="chart" class="bars">
+        <div class="empty">Nog geen gegevens voor de grafiek.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Posten beheren</h2>
+
+      <div class="manage-categories">
+        <input id="newCategoryInput" type="text" placeholder="Nieuwe post">
+        <button id="addCategoryBtn" type="button">Toevoegen</button>
+        <button id="editCategoryBtn" class="category-edit-btn" type="button" aria-label="Posten verwijderen">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M6 7l1 14h10l1-14"></path>
+            <path d="M9 7V4h6v3"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="category-list" id="categoryList"></div>
+    </section>
+
+    <section class="card">
+      <h2>Export</h2>
+
+      <div class="export-wrap">
+        <button id="exportBtn" type="button">Export CSV</button>
+        <label class="import-label" for="importCsvInput">Import CSV</label>
+        <input id="importCsvInput" type="file" accept=".csv,text/csv">
+      </div>
+
+      <div id="importStatus" class="import-status"></div>
+    </section>
+  </main>
+
+  <script>
+    /* =========================================================
+       Vakantie-uitgaven v2.0 — JavaScript
+       ========================================================= */
+    (()=>{
+      "use strict";
+
+      /* ---------------------------------------------------------
+         1. Configuratie en state
+         --------------------------------------------------------- */
+      const STORAGE = {
+        data: "zomervakantie-uitgaven-dropbox-v10",
+        categories: "zomervakantie-uitgaven-categories-v10",
+        rates: "vakantie-uitgaven-pln-rates-v1",
+        oldData: [
+          "zomervakantie-uitgaven-dropbox-v9",
+          "zomervakantie-uitgaven-dropbox-v8",
+          "zomervakantie-uitgaven-dropbox-v7",
+          "zomervakantie-uitgaven-dropbox-v6",
+          "zomervakantie-uitgaven-dropbox-v5",
+          "zomervakantie-uitgaven-dropbox-v4",
+          "zomervakantie-uitgaven-dropbox-v3",
+          "zomervakantie-uitgaven-dropbox-v2"
+        ]
+      };
+
+      const DEFAULT_CATEGORIES = [];
+      let categories = [...DEFAULT_CATEGORIES];
+      let expenses = [];
+      let editingId = null;
+      let categoryDeleteMode = false;
+      let transactionType = "expense";
+
+      const $ = id => document.getElementById(id);
+
+      const el = {
+        splash: $("splash"),
+        updateBar: $("updateBar"),
+        updateNow: $("updateNow"),
+
+        netTotal: $("netTotal"),
+        receivedMini: $("receivedMini"),
+        chartTopCat: $("chartTopCat"),
+        expenseCount: $("expenseCount"),
+        chart: $("chart"),
+        rateBadge: $("rateBadge"),
+
+        entryTitle: $("entryTitle"),
+        entryBox: $("entryBox"),
+        addBtn: $("addBtn"),
+        confirmBtn: $("confirmBtn"),
+        cancelBtn: $("cancelBtn"),
+
+        expenseTypeBtn: $("expenseTypeBtn"),
+        incomeTypeBtn: $("incomeTypeBtn"),
+
+        categoryInput: $("categoryInput"),
+        dateInput: $("dateInput"),
+        currencyInput: $("currencyInput"),
+        rateInput: $("rateInput"),
+        amountInput: $("amountInput"),
+        noteInput: $("noteInput"),
+
+        filterSelect: $("filterSelect"),
+        sortSelect: $("sortSelect"),
+        expenseList: $("expenseList"),
+
+        newCategoryInput: $("newCategoryInput"),
+        addCategoryBtn: $("addCategoryBtn"),
+        editCategoryBtn: $("editCategoryBtn"),
+        categoryList: $("categoryList"),
+
+        exportBtn: $("exportBtn"),
+        importCsvInput: $("importCsvInput"),
+        importStatus: $("importStatus")
+      };
+
+      const ICON_EDIT = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0 0-3L17.5 5.5a2.1 2.1 0 0 0-3 0L4 16v4z"></path>
+          <path d="M13.5 6.5l4 4"></path>
+        </svg>`;
+
+      const ICON_TRASH = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M6 7l1 14h10l1-14"></path>
+          <path d="M9 7V4h6v3"></path>
+        </svg>`;
+
+      /* ---------------------------------------------------------
+         2. Helpers
+         --------------------------------------------------------- */
+      const escapeHtml = value => String(value || "").replace(/[&<>"']/g, char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+      }[char]));
+
+      function parseAmount(value){
+        const cleaned = String(value || "")
+          .replace("€","")
+          .replace("zł","")
+          .replace("PLN","")
+          .replace(/\s/g,"")
+          .replace(",",".");
+        const number = parseFloat(cleaned);
+        return Number.isFinite(number) ? number : 0;
+      }
+
+      const euro = value => new Intl.NumberFormat("nl-NL", {
+        style:"currency",
+        currency:"EUR"
+      }).format(value || 0);
+
+      const pln = value => "PLN " + new Intl.NumberFormat("nl-NL", {
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+      }).format(value || 0);
+
+      const rateText = value => new Intl.NumberFormat("nl-NL", {
+        minimumFractionDigits:2,
+        maximumFractionDigits:4
+      }).format(value || 0);
+
+      function signedEuro(value){
+        const abs = Math.abs(value || 0);
+        const prefix = value > 0 ? "+" : value < 0 ? "−" : "";
+        return prefix + euro(abs);
+      }
+
+      function isoToday(){
+        const d = new Date();
+        return [
+          d.getFullYear(),
+          String(d.getMonth() + 1).padStart(2,"0"),
+          String(d.getDate()).padStart(2,"0")
+        ].join("-");
+      }
+
+      function displayDate(value){
+        if(!value) return "";
+        const parts = String(value).split("-");
+        if(parts.length === 3 && parts[0].length === 4){
+          return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return value;
+      }
+
+      function normalizeDate(value){
+        value = String(value || "").trim();
+
+        if(!value) return isoToday();
+        if(/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+        if(/^\d{2}-\d{2}-\d{4}$/.test(value)){
+          const p = value.split("-");
+          return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        if(/^\d{2}\/\d{2}\/\d{4}$/.test(value)){
+          const p = value.split("/");
+          return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+
+        return isoToday();
+      }
+
+      function readJSON(key, fallback){
+        try{
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        }catch(error){
+          return fallback;
+        }
+      }
+
+      function writeJSON(key, value){
+        try{
+          localStorage.setItem(key, JSON.stringify(value));
+        }catch(error){}
+      }
+
+      /* ---------------------------------------------------------
+         3. Opslag
+         --------------------------------------------------------- */
+      function save(){
+        writeJSON(STORAGE.data, expenses);
+        writeJSON(STORAGE.categories, categories);
+      }
+
+      function load(){
+        try{
+          categories = readJSON(STORAGE.categories, [...DEFAULT_CATEGORIES]);
+          if(!Array.isArray(categories)) categories = [...DEFAULT_CATEGORIES];
+
+          let raw = localStorage.getItem(STORAGE.data);
+
+          if(!raw){
+            for(const key of STORAGE.oldData){
+              raw = localStorage.getItem(key);
+              if(raw) break;
+            }
+          }
+
+          expenses = raw ? JSON.parse(raw) : [];
+          if(!Array.isArray(expenses)) expenses = [];
+
+          expenses = expenses.map(item => {
+            const normalized = {
+              id: item.id || Date.now() + Math.random(),
+              date: normalizeDate(item.date),
+              category: item.category || "",
+              amount: Number(item.amount) || 0,
+              originalAmount: Number(item.originalAmount ?? item.amount) || 0,
+              currency: item.currency === "PLN" ? "PLN" : "EUR",
+              rate: Number(item.rate) || 1,
+              note: item.note || ""
+            };
+
+            if(normalized.currency === "PLN" && normalized.rate > 0 && normalized.rate < 1){
+              normalized.rate = 1 / normalized.rate;
+              normalized.amount = normalized.originalAmount / normalized.rate;
+            }
+
+            if(normalized.category && !categories.includes(normalized.category)){
+              categories.push(normalized.category);
+            }
+
+            return normalized;
+          });
+        }catch(error){
+          categories = [...DEFAULT_CATEGORIES];
+          expenses = [];
+        }
+      }
+
+      /* ---------------------------------------------------------
+         4. PLN-koers per datum
+         --------------------------------------------------------- */
+      function cachedRates(){
+        return readJSON(STORAGE.rates, {});
+      }
+
+      function saveRate(date, rate){
+        const rates = cachedRates();
+        rates[date] = rate;
+        writeJSON(STORAGE.rates, rates);
+      }
+
+      function setRateBadge(rate, state = "ok"){
+        el.rateBadge.classList.remove("loading","ok","err");
+        el.rateBadge.classList.add(state);
+        el.rateBadge.querySelector("b").textContent = rate ? rateText(rate) : "—";
+      }
+
+      function extractPlnRate(json){
+        if(!json || !json.rates) return 0;
+
+        const value =
+          json.rates.PLN ??
+          json.rates.pln ??
+          json.rates["PLN"];
+
+        const rate = Number(value);
+        return Number.isFinite(rate) && rate > 0 ? rate : 0;
+      }
+
+      function isTodayOrFuture(date){
+        return normalizeDate(date) >= isoToday();
+      }
+
+      async function fetchJson(url){
+        const response = await fetch(url, {
+          method: "GET",
+          cache: "no-store",
+          mode: "cors"
+        });
+
+        if(!response.ok){
+          throw new Error("HTTP " + response.status);
+        }
+
+        return response.json();
+      }
+
+      async function fetchFrankfurterRate(date){
+        date = normalizeDate(date);
+
+        const urls = isTodayOrFuture(date)
+          ? [
+              "https://api.frankfurter.dev/v2/rates?base=EUR&quotes=PLN",
+              "https://api.frankfurter.dev/v1/latest?base=EUR&symbols=PLN",
+              "https://api.frankfurter.app/latest?from=EUR&to=PLN"
+            ]
+          : [
+              `https://api.frankfurter.dev/v2/rates?date=${date}&base=EUR&quotes=PLN`,
+              `https://api.frankfurter.dev/v1/${date}?base=EUR&symbols=PLN`,
+              `https://api.frankfurter.app/${date}?from=EUR&to=PLN`
+            ];
+
+        let lastError = null;
+
+        for(const url of urls){
+          try{
+            const json = await fetchJson(url);
+            const rate = extractPlnRate(json);
+
+            if(rate){
+              return rate;
+            }
+          }catch(error){
+            lastError = error;
+          }
+        }
+
+        throw lastError || new Error("Geen PLN-koers ontvangen");
+      }
+
+      async function getPlnRate(date){
+        date = normalizeDate(date);
+        const cache = cachedRates();
+
+        if(cache[date]){
+          setRateBadge(cache[date], "ok");
+          return cache[date];
+        }
+
+        setRateBadge(null, "loading");
+
+        try{
+          const rate = await fetchFrankfurterRate(date);
+          saveRate(date, rate);
+          setRateBadge(rate, "ok");
+          return rate;
+        }catch(error){
+          const fallback = cache[isoToday()] || 4.25;
+          setRateBadge(fallback, "err");
+          return fallback;
+        }
+      }
+
+      async function updateRateForDate(force = false){
+        const date = el.dateInput.value || isoToday();
+        const rate = await getPlnRate(date);
+
+        if(el.currencyInput.value === "PLN" && (force || !el.rateInput.value || el.rateInput.dataset.auto === "1")){
+          el.rateInput.value = rateText(rate);
+          el.rateInput.dataset.auto = "1";
+        }
+      }
+
+      /* ---------------------------------------------------------
+         5. Invoer
+         --------------------------------------------------------- */
+      function setTransactionType(type){
+        transactionType = type === "income" ? "income" : "expense";
+        el.expenseTypeBtn.classList.toggle("active", transactionType === "expense");
+        el.incomeTypeBtn.classList.toggle("active", transactionType === "income");
+      }
+
+      function showEntry(item = null){
+        el.entryBox.classList.remove("hidden");
+        el.addBtn.classList.add("hidden");
+
+        if(item){
+          editingId = item.id;
+          el.entryTitle.textContent = "Uitgave aanpassen";
+          el.categoryInput.value = item.category;
+          el.dateInput.value = item.date || isoToday();
+          el.currencyInput.value = item.currency || "EUR";
+          el.rateInput.value = item.currency === "PLN" ? String(item.rate || "").replace(".",",") : "";
+          el.rateInput.dataset.auto = "0";
+          el.amountInput.value = String(Math.abs(item.originalAmount || item.amount || "")).replace(".",",");
+          el.noteInput.value = item.note || "";
+          el.rateInput.disabled = item.currency !== "PLN";
+          setTransactionType((item.originalAmount || item.amount) > 0 ? "income" : "expense");
+        }else{
+          editingId = null;
+          el.entryTitle.textContent = "Nieuwe regel";
+          el.categoryInput.value = categories[0] || "";
+          el.dateInput.value = isoToday();
+          el.currencyInput.value = "EUR";
+          el.rateInput.value = "";
+          el.rateInput.dataset.auto = "0";
+          el.amountInput.value = "";
+          el.noteInput.value = "";
+          el.rateInput.disabled = true;
+          setTransactionType("expense");
+        }
+
+        updateRateForDate(false);
+        setTimeout(() => el.amountInput.focus(), 100);
+      }
+
+      function hideEntry(){
+        editingId = null;
+        el.entryTitle.textContent = "Nieuwe regel";
+        el.entryBox.classList.add("hidden");
+        el.addBtn.classList.remove("hidden");
+
+        el.amountInput.value = "";
+        el.noteInput.value = "";
+        el.rateInput.value = "";
+        el.rateInput.dataset.auto = "0";
+        el.rateInput.disabled = true;
+        setTransactionType("expense");
+      }
+
+      function buildExpense(id = null){
+        let originalAmount = Math.abs(parseAmount(el.amountInput.value));
+        if(transactionType === "expense") originalAmount = -originalAmount;
+
+        const currency = el.currencyInput.value;
+        const rate = currency === "PLN" ? parseAmount(el.rateInput.value) : 1;
+
+        if(el.amountInput.value.trim() === ""){
+          el.amountInput.focus();
+          return null;
+        }
+
+        if(!el.categoryInput.value){
+          el.categoryInput.focus();
+          return null;
+        }
+
+        if(currency === "PLN" && (!rate || rate <= 0)){
+          el.rateInput.focus();
+          return null;
+        }
+
+        return {
+          id: id || Date.now() + Math.random(),
+          date: el.dateInput.value || isoToday(),
+          category: el.categoryInput.value,
+          amount: currency === "PLN" ? originalAmount / rate : originalAmount,
+          originalAmount,
+          currency,
+          rate,
+          note: el.noteInput.value.trim()
+        };
+      }
+
+      function saveEntry(){
+        const item = buildExpense(editingId);
+        if(!item) return;
+
+        if(editingId){
+          expenses = expenses.map(existing => String(existing.id) === String(editingId) ? item : existing);
+        }else{
+          expenses.push(item);
+        }
+
+        save();
+        hideEntry();
+        render();
+      }
+
+      function deleteExpense(id){
+        expenses = expenses.filter(item => String(item.id) !== String(id));
+        save();
+        render();
+      }
+
+      const findExpense = id => expenses.find(item => String(item.id) === String(id)) || null;
+
+      /* ---------------------------------------------------------
+         6. Categorieën
+         --------------------------------------------------------- */
+      function categoryIsUsed(category){
+        return expenses.some(item => item.category === category);
+      }
+
+      function addCategory(){
+        const value = el.newCategoryInput.value.trim();
+        if(!value) return;
+
+        const exists = categories.some(category => category.toLowerCase() === value.toLowerCase());
+
+        if(!exists){
+          categories.push(value);
+          save();
+          render();
+        }
+
+        el.newCategoryInput.value = "";
+      }
+
+      function deleteCategory(category){
+        if(categoryIsUsed(category)) return;
+        categories = categories.filter(item => item !== category);
+        save();
+        render();
+      }
+
+      function renderCategoryOptions(){
+        const options = categories.map(category => `<option>${escapeHtml(category)}</option>`).join("");
+
+        el.categoryInput.innerHTML = options;
+
+        const currentFilter = el.filterSelect.value || "Alles";
+        el.filterSelect.innerHTML = `<option value="Alles">Alles tonen</option>${options}`;
+        el.filterSelect.value = categories.includes(currentFilter) ? currentFilter : "Alles";
+
+        el.categoryList.innerHTML = categories.map(category => {
+          const used = categoryIsUsed(category);
+          const modeClass = categoryDeleteMode ? (used ? "locked" : "can-delete") : "";
+
+          return `<button class="chip ${modeClass}" data-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`;
+        }).join("");
+
+        document.querySelectorAll("[data-category]").forEach(button => {
+          button.onclick = () => {
+            if(categoryDeleteMode) deleteCategory(button.dataset.category);
+          };
+        });
+      }
+
+      /* ---------------------------------------------------------
+         7. Lijst + swipe
+         --------------------------------------------------------- */
+      function filteredSortedExpenses(){
+        let result = [...expenses];
+
+        if(el.filterSelect.value !== "Alles"){
+          result = result.filter(item => item.category === el.filterSelect.value);
+        }
+
+        switch(el.sortSelect.value){
+          case "oldest":
+            return result.sort((a,b) => String(a.date).localeCompare(String(b.date)) || (a.id - b.id));
+          case "category":
+            return result.sort((a,b) => String(a.category).localeCompare(String(b.category)));
+          case "amountDesc":
+            return result.sort((a,b) => b.amount - a.amount);
+          case "amountAsc":
+            return result.sort((a,b) => a.amount - b.amount);
+          default:
+            return result.sort((a,b) => String(b.date).localeCompare(String(a.date)) || (b.id - a.id));
+        }
+      }
+
+      function closeSwipeExcept(active = null){
+        document.querySelectorAll(".expense-cell").forEach(cell => {
+          if(cell !== active){
+            cell.classList.remove("edit-open","delete-open","dragging");
+          }
+        });
+      }
+
+      function renderList(){
+        const list = filteredSortedExpenses();
+
+        if(!list.length){
+          el.expenseList.innerHTML = `<div class="empty">Nog geen uitgaven.</div>`;
+          return;
+        }
+
+        el.expenseList.innerHTML = list.map(item => {
+          const note = item.note ? `<span class="expense-note">${escapeHtml(item.note)}</span>` : "";
+          const original = item.currency === "PLN" ? `<span class="original">${pln(item.originalAmount)}</span>` : "";
+          const amountClass = item.amount > 0 ? "income" : "outgoing";
+
+          return `
+            <div class="expense-cell" data-id="${item.id}">
+              <button class="swipe-action swipe-edit" data-edit="${item.id}" type="button" aria-label="Wijzig">${ICON_EDIT}</button>
+              <button class="swipe-action swipe-delete" data-delete="${item.id}" type="button" aria-label="Wis">${ICON_TRASH}</button>
+
+              <div class="expense-line list-grid">
+                <div class="expense-date">${escapeHtml(displayDate(item.date))}</div>
+                <div class="expense-main">
+                  <div class="expense-cat">${escapeHtml(item.category)}</div>
+                  ${note}
+                </div>
+                <div class="expense-amount-wrap">
+                  <span class="expense-amount ${amountClass}">${signedEuro(item.amount)}</span>
+                  ${original}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        attachSwipe();
+
+        document.querySelectorAll("[data-delete]").forEach(button => {
+          const run = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteExpense(button.dataset.delete);
+          };
+          button.onclick = run;
+          button.ontouchend = run;
+        });
+
+        document.querySelectorAll("[data-edit]").forEach(button => {
+          const run = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const item = findExpense(button.dataset.edit);
+            if(item){
+              closeSwipeExcept();
+              showEntry(item);
+            }
+          };
+          button.onclick = run;
+          button.ontouchend = run;
+        });
+      }
+
+      function attachSwipe(){
+        document.querySelectorAll(".expense-cell").forEach(cell => {
+          const row = cell.querySelector(".expense-line");
+          let startX = 0;
+          let startY = 0;
+          let deltaX = 0;
+          let dragging = false;
+          let moved = false;
+
+          function start(x, y, target){
+            if(target && target.closest(".swipe-action")) return;
+            startX = x;
+            startY = y;
+            deltaX = 0;
+            dragging = true;
+            moved = false;
+            cell.classList.add("dragging");
+            closeSwipeExcept(cell);
+          }
+
+          function move(x, y){
+            if(!dragging) return;
+
+            const mx = x - startX;
+            const my = y - startY;
+
+            if(Math.abs(my) > Math.abs(mx) && Math.abs(my) > 12) return;
+
+            if(Math.abs(mx) > 6) moved = true;
+            deltaX = Math.max(-82, Math.min(82, mx));
+            row.style.transform = `translateX(${deltaX}px)`;
+          }
+
+          function end(){
+            if(!dragging) return;
+
+            dragging = false;
+            cell.classList.remove("dragging");
+            row.style.transform = "";
+            cell.classList.remove("edit-open","delete-open");
+
+            if(deltaX > 38){
+              cell.classList.add("edit-open");
+            }else if(deltaX < -38){
+              cell.classList.add("delete-open");
+            }
+          }
+
+          cell.addEventListener("touchstart", event => {
+            if(event.touches.length === 1){
+              start(event.touches[0].clientX, event.touches[0].clientY, event.target);
+            }
+          }, {passive:true});
+
+          cell.addEventListener("touchmove", event => {
+            if(event.touches.length === 1){
+              move(event.touches[0].clientX, event.touches[0].clientY);
+            }
+          }, {passive:true});
+
+          cell.addEventListener("touchend", end);
+        });
+      }
+
+      /* ---------------------------------------------------------
+         8. Statistiek en grafiek
+         --------------------------------------------------------- */
+      function renderStats(){
+        let net = 0;
+        let received = 0;
+        const totals = Object.fromEntries(categories.map(category => [category,0]));
+
+        expenses.forEach(item => {
+          net += item.amount;
+
+          if(item.amount > 0){
+            received += item.amount;
+          }
+
+          if(item.category){
+            totals[item.category] = (totals[item.category] || 0) + item.amount;
+          }
+        });
+
+        let topCategory = "-";
+        let topValue = 0;
+
+        categories.forEach(category => {
+          const abs = Math.abs(totals[category] || 0);
+          if(abs > topValue){
+            topValue = abs;
+            topCategory = category;
+          }
+        });
+
+        el.netTotal.textContent = signedEuro(net);
+        el.receivedMini.textContent = "+" + euro(received);
+        el.chartTopCat.textContent = topCategory;
+        el.expenseCount.textContent = String(expenses.length);
+      }
+
+      function renderChart(){
+        const totals = Object.fromEntries(categories.map(category => [category,0]));
+
+        expenses.forEach(item => {
+          if(item.category){
+            totals[item.category] = (totals[item.category] || 0) + item.amount;
+          }
+        });
+
+        const max = Math.max(0, ...Object.values(totals).map(value => Math.abs(value)));
+
+        if(!max){
+          el.chart.innerHTML = `<div class="empty">Nog geen gegevens voor de grafiek.</div>`;
+          return;
+        }
+
+        el.chart.innerHTML = categories
+          .slice()
+          .sort((a,b) => Math.abs(totals[b] || 0) - Math.abs(totals[a] || 0))
+          .map(category => {
+            const value = totals[category] || 0;
+            const pct = Math.round((Math.abs(value) / max) * 100);
+            const kind = value >= 0 ? "income" : "outgoing";
+
+            return `
+              <div>
+                <div class="barTop">
+                  <strong>${escapeHtml(category)}</strong>
+                  <span class="${kind}">${signedEuro(value)}</span>
+                </div>
+                <div class="barTrack">
+                  <div class="barFill ${kind}" style="width:${pct}%"></div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      /* ---------------------------------------------------------
+         9. CSV import/export
+         --------------------------------------------------------- */
+      function exportCSV(){
+        const lines = ["Type;Datum;Uitgave;Bedrag EUR;Origineel bedrag;Valuta;Koers;Opmerking"];
+
+        categories.forEach(category => {
+          lines.push(["POST","",category,"","","","",""].join(";"));
+        });
+
+        expenses.forEach(item => {
+          lines.push([
+            "UITGAVE",
+            displayDate(item.date),
+            item.category,
+            String(item.amount).replace(".",","),
+            String(item.originalAmount).replace(".",","),
+            item.currency,
+            String(item.rate).replace(".",","),
+            String(item.note || "").replace(/;/g,",")
+          ].join(";"));
+        });
+
+        const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+
+        a.href = url;
+        a.download = "zomervakantie-uitgaven.csv";
+        a.click();
+
+        URL.revokeObjectURL(url);
+      }
+
+      function parseCsvLine(line){
+        const result = [];
+        let current = "";
+        let inQuotes = false;
+
+        for(let i = 0; i < line.length; i++){
+          const ch = line[i];
+          const next = line[i + 1];
+
+          if(ch === '"' && inQuotes && next === '"'){
+            current += '"';
+            i++;
+          }else if(ch === '"'){
+            inQuotes = !inQuotes;
+          }else if(ch === ";" && !inQuotes){
+            result.push(current);
+            current = "";
+          }else{
+            current += ch;
+          }
+        }
+
+        result.push(current);
+        return result;
+      }
+
+      function importCSVText(text){
+        text = String(text || "").replace(/^\uFEFF/,"").trim();
+
+        if(!text){
+          el.importStatus.textContent = "CSV is leeg.";
+          return;
+        }
+
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+
+        if(lines.length < 2){
+          el.importStatus.textContent = "Geen uitgaven gevonden in CSV.";
+          return;
+        }
+
+        const headers = parseCsvLine(lines[0]).map(header => header.trim().toLowerCase());
+        const isTyped = headers[0] === "type";
+
+        const column = names => {
+          for(const name of names){
+            const index = headers.indexOf(name.toLowerCase());
+            if(index >= 0) return index;
+          }
+          return -1;
+        };
+
+        const cols = {
+          type: column(["type"]),
+          date: column(["datum","date"]),
+          category: column(["uitgave","soort","categorie","category"]),
+          euro: column(["bedrag eur","bedrag","amount eur","amount"]),
+          original: column(["origineel bedrag","original amount"]),
+          currency: column(["valuta","currency"]),
+          rate: column(["koers","rate"]),
+          note: column(["opmerking","note","omschrijving"])
+        };
+
+        let imported = 0;
+        let skipped = 0;
+        let posts = 0;
+
+        for(let r = 1; r < lines.length; r++){
+          const row = parseCsvLine(lines[r]);
+          const type = isTyped ? String(row[cols.type] || "").trim().toUpperCase() : "UITGAVE";
+          const category = cols.category >= 0 ? String(row[cols.category] || "").trim() : "";
+
+          if(type === "POST"){
+            if(category && !categories.includes(category)){
+              categories.push(category);
+              posts++;
+            }
+            continue;
+          }
+
+          if(!category){
+            skipped++;
+            continue;
+          }
+
+          let currency = cols.currency >= 0 ? String(row[cols.currency] || "EUR").trim().toUpperCase() : "EUR";
+          if(currency !== "PLN") currency = "EUR";
+
+          let originalAmount = cols.original >= 0 ? parseAmount(row[cols.original]) : 0;
+          let amount = cols.euro >= 0 ? parseAmount(row[cols.euro]) : 0;
+          let rate = cols.rate >= 0 ? parseAmount(row[cols.rate]) : 1;
+
+          if(currency === "PLN"){
+            if(!originalAmount && amount) originalAmount = amount;
+            if(!rate || rate <= 0) rate = originalAmount && amount ? originalAmount / amount : 4.25;
+            amount = originalAmount / rate;
+          }else{
+            originalAmount = originalAmount || amount;
+            amount = amount || originalAmount;
+            rate = 1;
+          }
+
+          if(!amount && !originalAmount){
+            skipped++;
+            continue;
+          }
+
+          if(!categories.includes(category)){
+            categories.push(category);
+          }
+
+          expenses.push({
+            id: Date.now() + Math.random() + r,
+            date: normalizeDate(cols.date >= 0 ? row[cols.date] : ""),
+            category,
+            amount,
+            originalAmount,
+            currency,
+            rate,
+            note: cols.note >= 0 ? String(row[cols.note] || "").trim() : ""
+          });
+
+          imported++;
+        }
+
+        save();
+        render();
+
+        el.importStatus.textContent =
+          imported + " uitgave" + (imported === 1 ? "" : "n") + " geïmporteerd" +
+          (posts ? ", " + posts + " post" + (posts === 1 ? "" : "en") : "") +
+          (skipped ? ", " + skipped + " overgeslagen." : ".");
+      }
+
+      function importCSVFile(file){
+        if(!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = event => {
+          importCSVText(event.target.result);
+          el.importCsvInput.value = "";
+        };
+
+        reader.onerror = () => {
+          el.importStatus.textContent = "Importeren mislukt.";
+        };
+
+        reader.readAsText(file, "utf-8");
+      }
+
+      /* ---------------------------------------------------------
+         10. Splashscreen en PWA
+         --------------------------------------------------------- */
+      function playSplash(){
+        document.body.classList.add("loading");
+        el.splash.classList.add("play");
+
+        setTimeout(() => el.splash.classList.add("fade-out"), 1800);
+
+        setTimeout(() => {
+          el.splash.classList.add("hide");
+          document.body.classList.remove("loading");
+        }, 2000);
+      }
+
+      function registerServiceWorker(){
+        if(!("serviceWorker" in navigator)) return;
+
+        let waitingWorker = null;
+
+        navigator.serviceWorker.register("service-worker.js").then(reg => {
+          reg.addEventListener("updatefound", () => {
+            const worker = reg.installing;
+            if(!worker) return;
+
+            worker.addEventListener("statechange", () => {
+              if(worker.state === "installed" && navigator.serviceWorker.controller){
+                waitingWorker = worker;
+                el.updateBar.classList.remove("hidden");
+              }
+            });
+          });
+        }).catch(() => {});
+
+        el.updateNow.onclick = () => {
+          if(waitingWorker){
+            waitingWorker.postMessage({type:"SKIP_WAITING"});
+          }else{
+            location.reload();
+          }
+        };
+
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          location.reload();
+        });
+      }
+
+      /* ---------------------------------------------------------
+         11. Events en start
+         --------------------------------------------------------- */
+      function bindEvents(){
+        el.addBtn.onclick = () => showEntry();
+        el.confirmBtn.onclick = saveEntry;
+        el.cancelBtn.onclick = hideEntry;
+
+        el.expenseTypeBtn.onclick = () => setTransactionType("expense");
+        el.incomeTypeBtn.onclick = () => setTransactionType("income");
+
+        el.filterSelect.onchange = renderList;
+        el.sortSelect.onchange = renderList;
+
+        el.exportBtn.onclick = exportCSV;
+        el.importCsvInput.onchange = () => importCSVFile(el.importCsvInput.files && el.importCsvInput.files[0]);
+
+        el.addCategoryBtn.onclick = addCategory;
+
+        el.editCategoryBtn.onclick = () => {
+          categoryDeleteMode = !categoryDeleteMode;
+          el.editCategoryBtn.classList.toggle("active", categoryDeleteMode);
+          renderCategoryOptions();
+        };
+
+        document.addEventListener("click", event => {
+          if(!event.target.closest(".expense-cell")){
+            closeSwipeExcept();
+          }
+        });
+
+        el.currencyInput.onchange = () => {
+          if(el.currencyInput.value === "PLN"){
+            el.rateInput.disabled = false;
+            el.rateInput.value = "";
+            el.rateInput.dataset.auto = "1";
+            updateRateForDate(true);
+          }else{
+            el.rateInput.disabled = true;
+            el.rateInput.value = "";
+            el.rateInput.dataset.auto = "0";
+          }
+        };
+
+        el.dateInput.onchange = () => updateRateForDate(true);
+
+        el.rateInput.addEventListener("input", () => {
+          el.rateInput.dataset.auto = "0";
+        });
+
+        el.amountInput.addEventListener("keydown", event => {
+          if(event.key === "Enter") saveEntry();
+        });
+
+        el.noteInput.addEventListener("keydown", event => {
+          if(event.key === "Enter") saveEntry();
+        });
+
+        el.newCategoryInput.addEventListener("keydown", event => {
+          if(event.key === "Enter") addCategory();
+        });
+      }
+
+      function render(){
+        renderCategoryOptions();
+        renderStats();
+        renderList();
+        renderChart();
+      }
+
+      function start(){
+        playSplash();
+        load();
+        bindEvents();
+        hideEntry();
+        render();
+        updateRateForDate(false);
+        registerServiceWorker();
+      }
+
+      if(document.readyState === "loading"){
+        document.addEventListener("DOMContentLoaded", start);
+      }else{
+        start();
+      }
+    })();
+  </script>
+</body>
+</html>
